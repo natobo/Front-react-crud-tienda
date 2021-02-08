@@ -1,17 +1,27 @@
 import React, {Component} from 'react';
 import './App.css';
+import ImageUploader from "react-images-upload";
 import axios from "axios";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faEdit,faTrashAlt} from '@fortawesome/free-solid-svg-icons';
 import {Modal,ModalBody,ModalFooter,ModalHeader,Card,Col,CardImg,CardBody,CardSubtitle,CardTitle,
-  CardText,CardDeck,Row,Container,Navbar,Nav,NavbarBrand,NavItem,NavLink,NavbarText} from 'reactstrap';
+  CardText,CardDeck,Row,Container,Navbar,Nav,NavbarBrand,NavItem,NavLink,NavbarText,Input} from 'reactstrap';
 import  UserPool from './UserPool';
 import  {CognitoUser,AuthenticationDetails} from 'amazon-cognito-identity-js'
+import  ReactS3 from "react-s3";
 
 
 // URL del API gateway del back
-const url="https://nouglttpu1.execute-api.us-east-1.amazonaws.com/Prod/Lambda_api-lambda-db-tiendaback-nicotobo";
+const url="https://aiymzrgww6.execute-api.us-east-1.amazonaws.com/Prod/Lambda_api-lambda-db-tiendaback-nicotobo";
+// Config para subir imagenes al bucket
+const configS3 = {
+  bucketName: 'stack-tienda-nicolas-tobo-s3',
+  dirName: 'photos', /* optional */
+  region: 'us-east-1',
+  accessKeyId: 'AKIAWAOCTUY347CDHMOA',
+  secretAccessKey: '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',
+}
 
 class App extends Component{
   // Estados de la clase
@@ -31,6 +41,7 @@ class App extends Component{
       imagenUrl:"",
     },
     tipoModal:"",
+    imagenProducto: [],
     // Variables de estado que guardan la informacion de logeo
     email:"",
     password:"",
@@ -39,6 +50,12 @@ class App extends Component{
   //Funciones de estado que modifican la informacion de logeo
   setEmail = (pEmail)=>{ this.email = pEmail};
   setPassword = (pPassword)=> {this.password = pPassword};
+  // Actualiza la img del producto
+  setImage=(imgProd)=>{
+    this.setState({
+      imagenProducto: [imgProd],
+    });
+  }
   //Funcion para registrar usuario
   registrarUsuario = ()=>{
     UserPool.signUp(this.state.email,this.state.password,[],null,(err,data)=>{
@@ -80,8 +97,19 @@ class App extends Component{
      }).then(response=>this.setState({data: response.data.Items}))
      .catch(error => console.log(error.message));
   }
+  //Metodo que carga una imagen en un bucket s3
+  uploadProductoImg = ()=>{
+    console.log(this.state.imagenProducto);
+    ReactS3.uploadFile(this.state.imagenProducto[0],configS3)
+      .then(
+        (data)=> console.log(data)
+      ).catch(
+        (err)=>console.error(err)
+      )
+  }
   // Metodo que crea un producto
   postProducto= async()=>{
+    this.uploadProductoImg()
     this.state.form.id=(this.state.data.length+1)+"";
     let peticion = {
       "operation": "create",
@@ -119,10 +147,8 @@ class App extends Component{
       "payload": {"Key":
               { "id": this.state.form.id}
           }
-
         }
     await axios.post(url,peticion).then(response=>{
-      console.log(response);
       this.toggleModalEliminar();
       this.getProductos();
     }).catch(error =>{ console.log(error.message)});
@@ -249,6 +275,19 @@ class App extends Component{
                 <br/>
                 <label htmlFor="imagenUrl">Imagen Url</label>
                 <input className="form-control" type="text" name="imagenUrl" id="imagenUrl" onChange={this.handleChange} value={form?form.imagenUrl:''}/>
+                <label htmlFor="productoImgFile">SubirImagen</label>
+                <ImageUploader 
+                        key="image-uploader"
+                        withIcon={true}
+                        singleImage={true}
+                        withPreview={true}
+                        label="Maximum size file: 5MB"
+                        buttonText="Elige una imagen"
+                        imgExtension={[".jpg",".png",".jpeg"]}
+                        maxFileSize={5242880}
+                        className="ImgProducto"
+                        onChange={this.setImage}>
+                </ImageUploader>
               </div>
             </ModalBody>
             <ModalFooter>
