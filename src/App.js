@@ -9,20 +9,10 @@ import {Modal,ModalBody,ModalFooter,ModalHeader,Card,Col,CardImg,CardBody,CardSu
   CardText,CardDeck,Row,Container,Navbar,Nav,NavbarBrand,NavItem,NavLink,NavbarText,Input} from 'reactstrap';
 import  UserPool from './UserPool';
 import  {CognitoUser,AuthenticationDetails} from 'amazon-cognito-identity-js'
-import  ReactS3 from "react-s3";
-
 
 // URL del API gateway del back
 const url="https://aiymzrgww6.execute-api.us-east-1.amazonaws.com/Prod/Lambda_api-lambda-db-tiendaback-nicotobo";
-// Config para subir imagenes al bucket
-const configS3 = {
-  bucketName: 'stack-tienda-nicolas-tobo-s3',
-  dirName: 'photos', /* optional */
-  region: 'us-east-1',
-  accessKeyId: 'AKIAWAOCTUY347CDHMOA',
-  secretAccessKey: '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',
-}
-
+// Componente 
 class App extends Component{
   // Estados de la clase
   state={
@@ -51,9 +41,11 @@ class App extends Component{
   setEmail = (pEmail)=>{ this.email = pEmail};
   setPassword = (pPassword)=> {this.password = pPassword};
   // Actualiza la img del producto
-  setImage=(imgProd)=>{
+  setImage=(p1,p2)=>{
+    console.log(p1);
+    console.log(p2);
     this.setState({
-      imagenProducto: [imgProd],
+      imagenProducto: p2,
     });
   }
   //Funcion para registrar usuario
@@ -100,12 +92,6 @@ class App extends Component{
   //Metodo que carga una imagen en un bucket s3
   uploadProductoImg = ()=>{
     console.log(this.state.imagenProducto);
-    ReactS3.uploadFile(this.state.imagenProducto[0],configS3)
-      .then(
-        (data)=> console.log(data)
-      ).catch(
-        (err)=>console.error(err)
-      )
   }
   // Metodo que crea un producto
   postProducto= async()=>{
