@@ -6,13 +6,15 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faEdit,faTrashAlt} from '@fortawesome/free-solid-svg-icons';
 import {Modal,ModalBody,ModalFooter,ModalHeader,Card,Col,CardImg,CardBody,CardSubtitle,CardTitle,
-  CardText,CardDeck,Row,Container,Navbar,Nav,NavbarBrand,NavItem,NavLink,NavbarText,Input} from 'reactstrap';
+  CardText,CardDeck,Row,Container,Navbar,Nav,NavbarBrand,NavItem,NavLink,NavbarText} from 'reactstrap';
 import  UserPool from './UserPool';
-import  {CognitoUser,AuthenticationDetails} from 'amazon-cognito-identity-js'
+import  {CognitoUser,AuthenticationDetails} from 'amazon-cognito-identity-js';
+import env from "react-dotenv";
 
 // URL del API gateway del back
-const urlCrud="https://9ypkxvdgb7.execute-api.us-east-1.amazonaws.com/Prod/Lambda_api-lambda-db-tiendaback-nicotobo";
-const urlImagenS3="https://9ypkxvdgb7.execute-api.us-east-1.amazonaws.com/Prod/sign-s3"
+const urlCrud=env.API_ENDPOINT_CRUD;
+// URL del API gateway para cargar las imagenes
+const urlImagenS3=env.API_ENDPOINT_IMG
 
 // Componente 
 class App extends Component{
@@ -98,7 +100,7 @@ class App extends Component{
     let fileType = fileParts[1];
     // Pregunta si se actualiza o no la imagen del producto, en caso de que sea un producto nuevo 
     // o se deba actualizar la imagen se hace el proceso de subir la imagen al bucket
-    if(this.state.form.imagenUrl===""||this.state.form.imagenUrl.split("/")[3]!=fileName){
+    if((this.state.form.imagenUrl===undefined)||(this.state.form.imagenUrl.split("/")[3]!=fileName)){
       axios.post(urlImagenS3,{
         "fileName" : fileName,
         "fileType" : fileType
