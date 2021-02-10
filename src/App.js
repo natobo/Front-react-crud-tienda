@@ -11,7 +11,9 @@ import  UserPool from './UserPool';
 import  {CognitoUser,AuthenticationDetails} from 'amazon-cognito-identity-js'
 
 // URL del API gateway del back
-const url="https://aiymzrgww6.execute-api.us-east-1.amazonaws.com/Prod/Lambda_api-lambda-db-tiendaback-nicotobo";
+const urlCrud="https://9ypkxvdgb7.execute-api.us-east-1.amazonaws.com/Prod/Lambda_api-lambda-db-tiendaback-nicotobo";
+const urlImagenS3="https://9ypkxvdgb7.execute-api.us-east-1.amazonaws.com/Prod/sign-s3"
+
 // Componente 
 class App extends Component{
   // Estados de la clase
@@ -35,17 +37,15 @@ class App extends Component{
     // Variables de estado que guardan la informacion de logeo
     email:"",
     password:"",
-    statusRegistro:false
+    statusRegistro:false,
   }
   //Funciones de estado que modifican la informacion de logeo
   setEmail = (pEmail)=>{ this.email = pEmail};
   setPassword = (pPassword)=> {this.password = pPassword};
   // Actualiza la img del producto
-  setImage=(p1,p2)=>{
-    console.log(p1);
-    console.log(p2);
+  setImage=(p1)=>{
     this.setState({
-      imagenProducto: p2,
+      imagenProducto: p1,
     });
   }
   //Funcion para registrar usuario
@@ -82,7 +82,7 @@ class App extends Component{
   }
   // Metodo que trae todos los productos del back
   getProductos=()=>{
-    axios.post(url,{
+    axios.post(urlCrud,{
       "operation": "list",
       "tableName": "Dynamo_api-lambda-db-tiendaback-nicotobo",
       "payload": {}
@@ -90,12 +90,52 @@ class App extends Component{
      .catch(error => console.log(error.message));
   }
   //Metodo que carga una imagen en un bucket s3
-  uploadProductoImg = ()=>{
-    console.log(this.state.imagenProducto);
+  uploadProductoImg = async()=>{
+    let file = this.state.imagenProducto[0];
+    // Divida el nombre del archivo para obtener el nombre y el tipo
+    let fileParts = file.name.split('.');
+    let fileName = fileParts[0];
+    let fileType = fileParts[1];
+    // Pregunta si se actualiza o no la imagen del producto, en caso de que sea un producto nuevo 
+    // o se deba actualizar la imagen se hace el proceso de subir la imagen al bucket
+    if(this.state.form.imagenUrl===""||this.state.form.imagenUrl.split("/")[3]!=fileName){
+      axios.post(urlImagenS3,{
+        "fileName" : fileName,
+        "fileType" : fileType
+      })
+      .then(response=>{
+        var returnData = JSON.parse(response.data).data.returnData;
+        var signedRequest = returnData.signedRequest;
+        var url = returnData.url;
+        this.setState({
+          form:{
+            id:this.state.form.id,
+            descripcion:this.state.form.descripcion,
+            precio:this.state.form.precio,
+            nombre:this.state.form.nombre,
+            imagenUrl:url
+          }
+        });
+        // Colocar el tipo de archivo en los encabezados para la carga
+        var options = { headers: { 'Content-Type': fileType, 'x-amz-acl': 'public-read' } }
+        axios.put(signedRequest,file,options)
+        .then(result => {
+          console.log("Response from s3");
+          this.state.tipoModal === 'insertar'?this.postProducto():this.putProducto();
+        })
+        .catch(error => {
+          alert("ERROR " + JSON.stringify(error));
+        })
+      }).catch(error => {
+        alert(JSON.stringify(error));
+      });
+    }
+    else{
+        this.putProducto();
+    }
   }
   // Metodo que crea un producto
   postProducto= async()=>{
-    this.uploadProductoImg()
     this.state.form.id=(this.state.data.length+1)+"";
     let peticion = {
       "operation": "create",
@@ -104,12 +144,11 @@ class App extends Component{
           "Item": this.state.form
       }
     }
-    await axios.post(url,peticion).then(response=>{
-      console.log(response);
+    await axios.post(urlCrud,peticion).then(response=>{
       this.toggleModalInsertar();
       this.getProductos();
     }).catch(error =>{ console.log(error.message)});
-  }
+  };
   // Metodo que actualiza un producto
   putProducto=async()=>{
     let peticion = {
@@ -119,7 +158,7 @@ class App extends Component{
           "Item": this.state.form
       }
     }
-    await axios.post(url,peticion).then(response=>{
+    await axios.post(urlCrud,peticion).then(response=>{
       console.log(response);
       this.toggleModalInsertar();
       this.getProductos();
@@ -134,7 +173,7 @@ class App extends Component{
               { "id": this.state.form.id}
           }
         }
-    await axios.post(url,peticion).then(response=>{
+    await axios.post(urlCrud,peticion).then(response=>{
       this.toggleModalEliminar();
       this.getProductos();
     }).catch(error =>{ console.log(error.message)});
@@ -214,7 +253,7 @@ class App extends Component{
       </Navbar>
 
       <br/>
-      <button className="btn btn-success" onClick={() =>{this.setState({form:null,tipoModal:'insertar'}); this.toggleModalInsertar()}}> Agregar Producto</button>
+      <button className="btn btn-success" onClick={() =>{this.setState({form:null,tipoModal:'insertar'}); this.toggleModalInsertar()}}>Agregar Producto</button>
       <br/><br/>
         <Container>
           <Row>
@@ -247,7 +286,7 @@ class App extends Component{
             </ModalHeader>
             <ModalBody>
               <div className="form-group">
-                <label htmlFor="id">id</label>
+                <label htmlFor="id">Id</label>
                 <input className="form-control" type="string" name="id" id="id" readOnly onChange={this.handleChange} value={form?form.id:this.state.data.length+1}/>
                 <br/>
                 <label htmlFor="nombre">Nombre</label>
@@ -256,20 +295,18 @@ class App extends Component{
                 <label htmlFor="precio">Precio</label>
                 <input className="form-control" type="number" name="precio" id="precio" onChange={this.handleChange} value={form?form.precio:0}/>
                 <br/>
-                <label htmlFor="descripcion">Descripcion</label>
+                <label htmlFor="descripcion">Descripción</label>
                 <input className="form-control" type="text" name="descripcion" id="descripcion" onChange={this.handleChange} value={form?form.descripcion:''}/>
                 <br/>
-                <label htmlFor="imagenUrl">Imagen Url</label>
-                <input className="form-control" type="text" name="imagenUrl" id="imagenUrl" onChange={this.handleChange} value={form?form.imagenUrl:''}/>
-                <label htmlFor="productoImgFile">SubirImagen</label>
+                <label htmlFor="productoImgFile">{ this.state.tipoModal === 'insertar'?"Subir imagen":"Actualizar imagen"}</label>
                 <ImageUploader 
                         key="image-uploader"
                         withIcon={true}
                         singleImage={true}
                         withPreview={true}
-                        label="Maximum size file: 5MB"
+                        label="Tamaño máximo de archivo: 5MB"
                         buttonText="Elige una imagen"
-                        imgExtension={[".jpg",".png",".jpeg"]}
+                        imgExtension={[".jpg",".png",".jpeg",".gif"]}
                         maxFileSize={5242880}
                         className="ImgProducto"
                         onChange={this.setImage}>
@@ -278,9 +315,9 @@ class App extends Component{
             </ModalBody>
             <ModalFooter>
               { this.state.tipoModal === 'insertar'?
-              <button className="btn btn-success" onClick={()=>this.postProducto()}>
+              <button className="btn btn-success" onClick={()=>this.uploadProductoImg()}>
                 Insertar
-              </button>: <button className="btn btn-primary" onClick={()=>this.putProducto()}>
+              </button>: <button className="btn btn-primary" onClick={()=>this.uploadProductoImg()}>
                 Actualizar
               </button>
               }
