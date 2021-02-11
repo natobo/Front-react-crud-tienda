@@ -5,8 +5,8 @@ import axios from "axios";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faEdit,faTrashAlt} from '@fortawesome/free-solid-svg-icons';
-import {Modal,ModalBody,ModalFooter,ModalHeader,Card,Col,CardImg,CardBody,CardSubtitle,CardTitle,
-  CardText,CardDeck,Row,Container,Navbar,Nav,NavbarBrand,NavItem,NavLink,NavbarText} from 'reactstrap';
+import {Modal,ModalBody,ModalFooter,ModalHeader,Card,CardImg,CardBody,CardSubtitle,CardTitle,
+  CardText,CardColumns,Row,Container,Navbar,Nav,NavbarBrand,NavItem,NavLink,NavbarText} from 'reactstrap';
 import  UserPool from './UserPool';
 import  {CognitoUser,AuthenticationDetails} from 'amazon-cognito-identity-js';
 import env from "react-dotenv";
@@ -145,7 +145,7 @@ class App extends Component{
   }
   // Metodo que crea un producto
   postProducto= async()=>{
-    this.state.form.id=(this.state.data.length+1)+"";
+    this.state.form.id=(Date.now())+"";
     let peticion = {
       "operation": "create",
       "tableName": tablename,
@@ -264,13 +264,12 @@ class App extends Component{
       <br/>
       <button className="btn btn-success" onClick={() =>{this.setState({form:null,tipoModal:'insertar'}); this.toggleModalInsertar()}}>Agregar Producto</button>
       <br/><br/>
-        <Container>
+        <Container fluid={true}>
           <Row>
-            <CardDeck>
+            <CardColumns>
               {this.state.data.map(producto =>{
                   return(
-                    <Col sm="3">
-                      <Card style={{ width: '18rem' }} >
+                      <Card style={{ width: '20rem'}} >
                         <CardImg variant="top" src={producto.imagenUrl}  width="50%" />
                         <CardBody>
                           <strong><CardTitle>{producto.nombre}</CardTitle></strong>
@@ -282,10 +281,9 @@ class App extends Component{
                           <button className="btn btn-danger"  onClick={()=>{this.seleccionarProducto(producto);this.toggleModalEliminar()}}> <FontAwesomeIcon icon={faTrashAlt}/> </button>
                         </CardBody>  
                       </Card>
-                    </Col>
                   )
               })}
-            </CardDeck>
+            </CardColumns>
           </Row>
         </Container>
 
@@ -296,7 +294,7 @@ class App extends Component{
             <ModalBody>
               <div className="form-group">
                 <label htmlFor="id">Id</label>
-                <input className="form-control" type="string" name="id" id="id" readOnly onChange={this.handleChange} value={form?form.id:this.state.data.length+1}/>
+                <input className="form-control" type="string" name="id" id="id" readOnly onChange={this.handleChange} value={form?form.id:"id generado por la aplicación.."}/>
                 <br/>
                 <label htmlFor="nombre">Nombre</label>
                 <input className="form-control" type="text" name="nombre" id="nombre" onChange={this.handleChange} value={form?form.nombre:''}/>
