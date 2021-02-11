@@ -46,6 +46,6 @@
     ]
   },
    "react-dotenv": {
-    "whitelist": ["USER_POOL_ID","CLIENT_ID","API_ENDPOINT_IMG","API_ENDPOINT_CRUD"]
+    "whitelist": ["USER_POOL_ID","CLIENT_ID","API_ENDPOINT_IMG","API_ENDPOINT_CRUD","TABLE_NAME"]
   }
 }

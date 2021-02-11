@@ -14,7 +14,9 @@ import env from "react-dotenv";
 // URL del API gateway del back
 const urlCrud=env.API_ENDPOINT_CRUD;
 // URL del API gateway para cargar las imagenes
-const urlImagenS3=env.API_ENDPOINT_IMG
+const urlImagenS3=env.API_ENDPOINT_IMG;
+// nombre de la base de datos Dynamo DB
+const tablename= env.TABLE_NAME;
 
 // Componente 
 class App extends Component{
@@ -40,6 +42,7 @@ class App extends Component{
     email:"",
     password:"",
     statusRegistro:false,
+    cambioImgReciente:false,
   }
   //Funciones de estado que modifican la informacion de logeo
   setEmail = (pEmail)=>{ this.email = pEmail};
@@ -48,6 +51,7 @@ class App extends Component{
   setImage=(p1)=>{
     this.setState({
       imagenProducto: p1,
+      cambioImgReciente: true,
     });
   }
   //Funcion para registrar usuario
@@ -86,7 +90,7 @@ class App extends Component{
   getProductos=()=>{
     axios.post(urlCrud,{
       "operation": "list",
-      "tableName": "Dynamo_api-lambda-db-tiendaback-nicotobo",
+      "tableName": tablename,
       "payload": {}
      }).then(response=>this.setState({data: response.data.Items}))
      .catch(error => console.log(error.message));
@@ -95,12 +99,14 @@ class App extends Component{
   uploadProductoImg = async()=>{
     let file = this.state.imagenProducto[0];
     // Divida el nombre del archivo para obtener el nombre y el tipo
+    if(file){
     let fileParts = file.name.split('.');
-    let fileName = fileParts[0];
-    let fileType = fileParts[1];
+    var fileName = fileParts[0];
+    var fileType = fileParts[1];
+    }
     // Pregunta si se actualiza o no la imagen del producto, en caso de que sea un producto nuevo 
     // o se deba actualizar la imagen se hace el proceso de subir la imagen al bucket
-    if((this.state.form.imagenUrl===undefined)||(this.state.form.imagenUrl.split("/")[3]!=fileName)){
+    if((this.state.form.imagenUrl===undefined)||((this.state.form.imagenUrl.split("/")[3]!=fileName)&&(this.state.cambioImgReciente))){
       axios.post(urlImagenS3,{
         "fileName" : fileName,
         "fileType" : fileType
@@ -124,6 +130,7 @@ class App extends Component{
         .then(result => {
           console.log("Response from s3");
           this.state.tipoModal === 'insertar'?this.postProducto():this.putProducto();
+          this.state.cambioImgReciente=false;
         })
         .catch(error => {
           alert("ERROR " + JSON.stringify(error));
@@ -141,7 +148,7 @@ class App extends Component{
     this.state.form.id=(this.state.data.length+1)+"";
     let peticion = {
       "operation": "create",
-      "tableName": "Dynamo_api-lambda-db-tiendaback-nicotobo",
+      "tableName": tablename,
       "payload": {
           "Item": this.state.form
       }
@@ -155,7 +162,7 @@ class App extends Component{
   putProducto=async()=>{
     let peticion = {
       "operation": "create",
-      "tableName": "Dynamo_api-lambda-db-tiendaback-nicotobo",
+      "tableName": tablename,
       "payload": {
           "Item": this.state.form
       }
@@ -170,7 +177,7 @@ class App extends Component{
   deleteProducto=async()=>{
     let peticion = {
       "operation": "delete",
-      "tableName": "Dynamo_api-lambda-db-tiendaback-nicotobo",
+      "tableName": tablename,
       "payload": {"Key":
               { "id": this.state.form.id}
           }
